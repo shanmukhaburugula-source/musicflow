@@ -1,0 +1,188 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Flow | Ethereal Live Experience</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #E879F9;
+            --accent-glow: rgba(232, 121, 249, 0.4);
+            --bg-deep: #050505;
+            --bg-surface: #0A0A0B;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-deep);
+            color: #F4F4F5;
+            overflow-x: hidden;
+            letter-spacing: -0.02em;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-deep);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #27272A;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
+
+        /* 3D Automatic Cube Styles */
+        .scene {
+          width: 150px; /* Increased size significantly */
+          height: 150px;
+          perspective: 1200px;
+          margin-bottom: 3rem;
+          filter: drop-shadow(0 0 50px var(--accent-glow));
+        }
+
+        .cube {
+          width: 100%;
+          height: 100%;
+          position: relative;
+          transform-style: preserve-3d;
+          animation: rotateCube 12s infinite linear; /* Slightly faster rotation */
+        }
+
+        .cube__face {
+          position: absolute;
+          width: 150px;
+          height: 150px;
+          border: 1.5px solid rgba(255, 255, 255, 0.2);
+          background: rgba(232, 121, 249, 0.1);
+          backdrop-filter: blur(16px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.1);
+        }
+
+        .cube__face--front  { transform: rotateY(  0deg) translateZ(75px); }
+        .cube__face--right  { transform: rotateY( 90deg) translateZ(75px); }
+        .cube__face--back   { transform: rotateY(180deg) translateZ(75px); }
+        .cube__face--left   { transform: rotateY(-90deg) translateZ(75px); }
+        .cube__face--top    { transform: rotateX( 90deg) translateZ(75px); }
+        .cube__face--bottom { transform: rotateX(-90deg) translateZ(75px); }
+
+        @keyframes rotateCube {
+          from { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+          to { transform: rotateX(360deg) rotateY(720deg) rotateZ(360deg); }
+        }
+
+        /* Floating 3D Elements for Side Decoration */
+        .floating-3d {
+          transform-style: preserve-3d;
+          animation: floatAround 6s ease-in-out infinite;
+        }
+
+        @keyframes floatAround {
+          0%, 100% { transform: translateY(0px) rotateX(15deg) rotateY(15deg) scale(1); }
+          50% { transform: translateY(-30px) rotateX(-15deg) rotateY(-15deg) scale(1.1); }
+        }
+
+        /* Falling Sprinkles Animation (Snow intensity increased) */
+        .sprinkles-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .sprinkle {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.5;
+            filter: blur(1px);
+            animation: fall linear infinite;
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(-10vh) translateX(0);
+                opacity: 0;
+            }
+            10% { opacity: 0.8; }
+            90% { opacity: 0.8; }
+            100% {
+                transform: translateY(110vh) translateX(40px);
+                opacity: 0;
+            }
+        }
+
+        .marquee-track {
+            display: flex;
+            align-items: center;
+            gap: 3rem;
+            white-space: nowrap;
+            animation: marquee 40s linear infinite;
+        }
+
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "lucide-react": "https://esm.sh/lucide-react@^0.475.0",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "firebase/": "https://esm.sh/firebase@^12.7.0/"
+  }
+}
+</script>
+</head>
+<body>
+    <div class="sprinkles-container" id="sprinkles"></div>
+    <div id="root"></div>
+
+    <script>
+        // Generate high intensity sprinkles
+        const container = document.getElementById('sprinkles');
+        const count = 150; // Increased count
+        for (let i = 0; i < count; i++) {
+            const sprinkle = document.createElement('div');
+            sprinkle.className = 'sprinkle';
+            
+            const size = Math.random() * 4 + 1; // Slightly larger possible size
+            const left = Math.random() * 100;
+            const duration = Math.random() * 5 + 3; // Faster speed
+            const delay = Math.random() * 10;
+            
+            sprinkle.style.width = `${size}px`;
+            sprinkle.style.height = `${size}px`;
+            sprinkle.style.left = `${left}%`;
+            sprinkle.style.animationDuration = `${duration}s`;
+            sprinkle.style.animationDelay = `${-delay}s`;
+            
+            if (Math.random() > 0.6) {
+                sprinkle.style.background = Math.random() > 0.5 ? '#E879F9' : '#22D3EE';
+                sprinkle.style.filter = 'blur(1.5px)';
+                sprinkle.style.opacity = '0.7';
+            }
+
+            container.appendChild(sprinkle);
+        }
+    </script>
+</body>
+</html>

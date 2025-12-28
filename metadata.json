@@ -1,0 +1,7 @@
+{
+  "name": "MusicFlow",
+  "description": "A sleek midnight-themed music discovery platform with high-impact visuals and intuitive vertical card layouts.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
