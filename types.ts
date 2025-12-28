@@ -8,7 +8,7 @@ export interface Track {
   duration: string;
   genre?: string;
   fullDescription?: string;
-  audioUrl?: string; // New field for audio playback
+  audioUrl?: string;
   organizer?: {
     name: string;
     avatar: string;
@@ -16,6 +16,16 @@ export interface Track {
   };
   location?: string;
   dateTime?: string;
+  // New Fields for Visibility and Source
+  isPublic?: boolean;
+  source?: 'static' | 'firestore';
+  // Existing Fields
+  ticketPrice?: string;
+  time?: string;
+  artistId?: string;
+  artistEmail?: string;
+  createdAt?: any;
+  updatedAt?: any;
 }
 
 export interface Playlist {
@@ -36,4 +46,12 @@ export enum ViewType {
   PLAYLIST_DETAIL = 'PLAYLIST_DETAIL',
   CREATE_EVENT = 'CREATE_EVENT',
   PROFILE = 'PROFILE'
+}
+
+export interface ArtistProfile {
+  uid: string;
+  name: string;
+  email: string;
+  profilePhoto?: string;
+  createdAt: any;
 }

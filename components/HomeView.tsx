@@ -137,7 +137,7 @@ const HomeView: React.FC<HomeViewProps> = ({ tracks, onPlaylistSelect, onTrackSe
                     <div className="space-y-2 md:space-y-3 mt-4 md:mt-6">
                       <div className="flex items-center gap-2 md:gap-3 text-zinc-400 font-semibold text-xs md:text-sm">
                         <Calendar size={16} className="text-[#22D3EE]" />
-                        <span>{track.dateTime.replace('T', ' ')}</span>
+                        <span>{typeof track.dateTime === 'string' ? track.dateTime.replace('T', ' ') : 'Scheduled'}</span>
                       </div>
                       <div className="flex items-center gap-2 md:gap-3 text-zinc-400 font-semibold text-xs md:text-sm">
                         <MapPin size={16} className="text-[#22D3EE]" />

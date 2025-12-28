@@ -1,7 +1,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { auth } from '../firebase';
 import { Track } from '../types';
-import { Sparkles, Upload, Music, MapPin, Calendar as CalendarIcon, Type, Star, Trash2, LayoutGrid, Plus, X, Save, Clock } from 'lucide-react';
+import { Upload, MapPin, Calendar as CalendarIcon, Type, Star, Trash2, Plus, Save, Clock, Disc, Globe, Lock } from 'lucide-react';
 
 interface CreateEventViewProps {
   tracks: Track[];
@@ -14,15 +15,18 @@ interface CreateEventViewProps {
 const CreateEventView: React.FC<CreateEventViewProps> = ({ tracks, editingTrack, onCreateEvent, onDeleteEvent, onCancelEdit }) => {
   const [activeTab, setActiveTab] = useState<'create' | 'manage'>('create');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const user = auth.currentUser;
   
   const [formData, setFormData] = useState({
-    artist: '',
     title: '',
-    dateTime: '',
+    album: '',
+    date: '',
+    time: '',
     location: '',
     genre: '',
     cover: '',
-    fullDescription: ''
+    fullDescription: '',
+    isPublic: true
   });
 
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -30,312 +34,136 @@ const CreateEventView: React.FC<CreateEventViewProps> = ({ tracks, editingTrack,
   useEffect(() => {
     if (editingTrack) {
       setFormData({
-        artist: editingTrack.artist,
         title: editingTrack.title,
-        dateTime: editingTrack.dateTime || '',
+        album: editingTrack.album || '',
+        date: editingTrack.dateTime?.split('T')[0] || '',
+        time: editingTrack.time || '',
         location: editingTrack.location || '',
         genre: editingTrack.genre || '',
         cover: editingTrack.cover,
-        fullDescription: editingTrack.fullDescription || ''
+        fullDescription: editingTrack.fullDescription || '',
+        isPublic: editingTrack.isPublic ?? true
       });
       setPreviewImage(editingTrack.cover);
       setActiveTab('create');
     }
   }, [editingTrack]);
 
-  const resizeImage = (base64Str: string, maxWidth = 600, maxHeight = 600): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.src = base64Str;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > maxWidth) {
-            height *= maxWidth / width;
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxHeight) {
-            width *= maxHeight / height;
-            height = maxHeight;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.8));
-      };
-    });
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64String = reader.result as string;
-        const optimizedImage = await resizeImage(base64String);
-        setFormData(prev => ({ ...prev, cover: optimizedImage }));
-        setPreviewImage(optimizedImage);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removeImage = () => {
-    setFormData(prev => ({ ...prev, cover: '' }));
-    setPreviewImage(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.artist || !formData.title) return;
+    if (!formData.title || !user) return;
 
     const eventToSave: Track = {
       id: editingTrack ? editingTrack.id : `user-event-${Date.now()}`,
-      artist: formData.artist,
+      artist: user.displayName || 'Artist',
       title: formData.title,
-      album: 'Live Performance',
+      album: formData.album || 'Live Performance',
       cover: formData.cover || 'https://images.unsplash.com/photo-1459749411177-042180ce673c?auto=format&fit=crop&q=80&w=1200',
       duration: '2:30:00',
       genre: formData.genre,
-      dateTime: formData.dateTime,
+      dateTime: `${formData.date}T${formData.time}`,
+      time: formData.time,
       location: formData.location,
       fullDescription: formData.fullDescription,
-      organizer: {
-        name: 'You (Host)',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=user',
-        bio: 'Event Host'
-      }
+      isPublic: formData.isPublic,
+      source: 'firestore'
     };
 
     onCreateEvent(eventToSave);
-    setFormData({ artist: '', title: '', dateTime: '', location: '', genre: '', cover: '', fullDescription: '' });
-    setPreviewImage(null);
-    if (!editingTrack) setActiveTab('manage');
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target;
+    const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+    setFormData(prev => ({ ...prev, [name]: val }));
   };
 
-  const userEvents = tracks.filter(t => t.id.startsWith('user-event-'));
-
   return (
-    <div className="max-w-4xl mx-auto py-6 md:py-12 animate-in fade-in zoom-in-95 duration-700 relative z-10">
+    <div className="max-w-4xl mx-auto py-12 animate-in fade-in duration-700">
       <div className="text-center mb-10">
-        <h2 className="text-4xl md:text-5xl font-black tracking-tight text-white mb-6 uppercase">
-          {editingTrack ? 'Edit Event' : 'Create Event'}
+        <h2 className="text-5xl font-black text-white mb-8 uppercase tracking-tighter">
+          {editingTrack ? 'Edit Broadcast' : 'Launch Dimension'}
         </h2>
         
-        {!editingTrack && (
-          <div className="flex items-center justify-center p-1 bg-white/5 border border-white/10 rounded-xl w-fit mx-auto backdrop-blur-md mb-8">
-            <button 
-              onClick={() => setActiveTab('create')}
-              className={`flex items-center gap-2 px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'create' ? 'bg-[#E879F9] text-white' : 'text-zinc-500 hover:text-white'}`}
-            >
-              New
-            </button>
-            <button 
-              onClick={() => setActiveTab('manage')}
-              className={`flex items-center gap-2 px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'manage' ? 'bg-[#E879F9] text-white' : 'text-zinc-500 hover:text-white'}`}
-            >
-              Manage
-            </button>
-          </div>
-        )}
+        <div className="flex items-center justify-center p-1 bg-white/5 border border-white/10 rounded-xl w-fit mx-auto mb-8">
+          <button onClick={() => setActiveTab('create')} className={`px-8 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${activeTab === 'create' ? 'bg-[#E879F9] text-white' : 'text-zinc-500'}`}>New</button>
+          <button onClick={() => setActiveTab('manage')} className={`px-8 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${activeTab === 'manage' ? 'bg-[#E879F9] text-white' : 'text-zinc-500'}`}>Manage</button>
+        </div>
       </div>
 
       {activeTab === 'create' ? (
-        <form onSubmit={handleSubmit} className="bg-[#0A0A0B]/80 backdrop-blur-xl border border-white/5 rounded-[2.5rem] p-8 md:p-10 shadow-2xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            
-            {/* Left Column */}
+        <form onSubmit={handleSubmit} className="bg-[#0A0A0B]/80 backdrop-blur-xl border border-white/5 rounded-[3rem] p-10 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#E879F9]">
-                  <Music size={12} /> Artist
-                </label>
-                <input
-                  type="text"
-                  name="artist"
-                  required
-                  value={formData.artist}
-                  onChange={handleChange}
-                  placeholder="Artist Name"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-3.5 text-white placeholder-zinc-700 focus:outline-none focus:border-[#E879F9] transition-all text-sm"
-                />
+                <label className="text-[10px] font-black uppercase tracking-widest text-[#E879F9]">Event Name</label>
+                <input type="text" name="title" required value={formData.title} onChange={handleChange} placeholder="e.g. Midnight Flow" className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-white focus:border-[#E879F9] outline-none" />
               </div>
 
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#E879F9]">
-                  <Type size={12} /> Title
-                </label>
-                <input
-                  type="text"
-                  name="title"
-                  required
-                  value={formData.title}
-                  onChange={handleChange}
-                  placeholder="Event Title"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-3.5 text-white placeholder-zinc-700 focus:outline-none focus:border-[#E879F9] transition-all text-sm"
-                />
+                <label className="text-[10px] font-black uppercase tracking-widest text-[#E879F9]">Tour / Album Name</label>
+                <input type="text" name="album" required value={formData.album} onChange={handleChange} placeholder="e.g. SOS Tour" className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-white focus:border-[#E879F9] outline-none" />
               </div>
 
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#E879F9]">
-                  <CalendarIcon size={12} /> When
-                </label>
-                <div className="relative">
-                  <input
-                    type="datetime-local"
-                    name="dateTime"
-                    value={formData.dateTime}
-                    onChange={handleChange}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-3.5 text-white focus:outline-none focus:border-[#E879F9] transition-all [color-scheme:dark] text-sm appearance-none"
-                  />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#E879F9]">Date</label>
+                  <input type="date" name="date" required value={formData.date} onChange={handleChange} className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-white [color-scheme:dark]" />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#E879F9]">
-                  <MapPin size={12} /> Where
-                </label>
-                <input
-                  type="text"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleChange}
-                  placeholder="Venue Location"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-3.5 text-white placeholder-zinc-700 focus:outline-none focus:border-[#E879F9] transition-all text-sm"
-                />
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#E879F9]">Time</label>
+                  <input type="time" name="time" required value={formData.time} onChange={handleChange} className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-white [color-scheme:dark]" />
+                </div>
               </div>
             </div>
 
-            {/* Right Column */}
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#E879F9]">
-                  <Upload size={12} /> Upload Image
+                <label className="text-[10px] font-black uppercase tracking-widest text-[#E879F9]">Visibility Settings</label>
+                <label className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
+                  <div className="flex items-center gap-3">
+                    {formData.isPublic ? <Globe size={18} className="text-[#22D3EE]" /> : <Lock size={18} className="text-zinc-500" />}
+                    <span className="text-[11px] font-bold text-white uppercase tracking-wider">Publish to Public Dimension</span>
+                  </div>
+                  <input type="checkbox" name="isPublic" checked={formData.isPublic} onChange={handleChange} className="w-5 h-5 accent-[#E879F9]" />
                 </label>
-                
-                <div 
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`relative group h-[140px] bg-white/5 border border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center cursor-pointer overflow-hidden transition-all hover:border-[#E879F9]/50 ${previewImage ? 'border-solid border-[#E879F9]' : ''}`}
-                >
-                  <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
-                  
-                  {previewImage ? (
-                    <>
-                      <img src={previewImage} className="w-full h-full object-cover" alt="Preview" />
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <span className="text-white text-[9px] font-black uppercase tracking-widest">Change</span>
-                      </div>
-                      <button 
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); removeImage(); }}
-                        className="absolute top-2 right-2 p-1.5 bg-black/50 rounded-lg text-white hover:bg-red-500 transition-all"
-                      >
-                        <X size={12} />
-                      </button>
-                    </>
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 text-zinc-600 group-hover:text-[#E879F9] transition-colors">
-                      <Upload size={20} />
-                      <p className="font-bold text-[10px] uppercase tracking-widest">Select Artwork</p>
-                    </div>
-                  )}
-                </div>
               </div>
 
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#E879F9]">
-                  <Star size={12} /> Genre
-                </label>
-                <input
-                  type="text"
-                  name="genre"
-                  value={formData.genre}
-                  onChange={handleChange}
-                  placeholder="e.g. Pop"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-3.5 text-white placeholder-zinc-700 focus:outline-none focus:border-[#E879F9] transition-all text-sm"
-                />
+                <label className="text-[10px] font-black uppercase tracking-widest text-[#E879F9]">Location</label>
+                <input type="text" name="location" required value={formData.location} onChange={handleChange} placeholder="Venue or City" className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-white focus:border-[#E879F9] outline-none" />
               </div>
 
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#E879F9]">
-                  Description
-                </label>
-                <textarea
-                  name="fullDescription"
-                  rows={2}
-                  value={formData.fullDescription}
-                  onChange={handleChange}
-                  placeholder="Short event summary"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-3.5 text-white placeholder-zinc-700 focus:outline-none focus:border-[#E879F9] transition-all text-sm resize-none"
-                />
+                <label className="text-[10px] font-black uppercase tracking-widest text-[#E879F9]">Description</label>
+                <textarea name="fullDescription" rows={3} required value={formData.fullDescription} onChange={handleChange} placeholder="Experience details..." className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-white focus:border-[#E879F9] outline-none resize-none" />
               </div>
             </div>
           </div>
 
           <div className="flex gap-4 pt-4">
-            {editingTrack && (
-                <button
-                    type="button"
-                    onClick={onCancelEdit}
-                    className="flex-1 border border-white/10 text-white py-4 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/5 transition-all"
-                >
-                    Cancel
-                </button>
-            )}
-            <button
-                type="submit"
-                className="flex-[2] bg-[#E879F9] text-white py-4 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
-            >
-                {editingTrack ? <><Save size={16} /> Save</> : <><Plus size={16} /> Create</>}
+            {editingTrack && <button type="button" onClick={onCancelEdit} className="flex-1 py-5 border border-white/10 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest">Cancel</button>}
+            <button type="submit" className="flex-[2] py-5 bg-[#E879F9] text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:scale-[1.02] shadow-xl transition-all">
+              {editingTrack ? 'Save Broadcast' : 'Launch Broadcast'}
             </button>
           </div>
         </form>
       ) : (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {userEvents.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {userEvents.map(event => (
-                <div key={event.id} className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-4 group hover:border-[#E879F9]/30 transition-all">
-                  <img src={event.cover} className="w-16 h-16 rounded-xl object-cover" alt="" />
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-white font-bold text-sm truncate">{event.title}</h4>
-                    <p className="text-zinc-500 text-[10px] font-bold uppercase truncate">{event.artist}</p>
-                    <p className="text-[#E879F9] text-[9px] font-black uppercase mt-1">
-                      {event.dateTime?.replace('T', ' ') || 'TBD'}
-                    </p>
-                  </div>
-                  <button 
-                    onClick={() => onDeleteEvent(event.id)}
-                    className="p-3 rounded-lg bg-red-500/10 text-red-500 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:text-white"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {tracks.length > 0 ? tracks.map(event => (
+            <div key={event.id} className="bg-[#0A0A0B] border border-white/5 rounded-[2rem] p-5 flex items-center gap-5 group hover:border-[#E879F9]/30 transition-all">
+              <img src={event.cover} className="w-20 h-20 rounded-2xl object-cover" alt="" />
+              <div className="flex-1 min-w-0">
+                <h4 className="text-white font-bold text-lg truncate uppercase tracking-tighter">{event.title}</h4>
+                <div className="flex items-center gap-2 mt-2">
+                   {event.isPublic ? <Globe size={12} className="text-[#22D3EE]" /> : <Lock size={12} className="text-zinc-600" />}
+                   <span className="text-zinc-500 text-[9px] font-black uppercase tracking-widest">{event.isPublic ? 'Public' : 'Private'}</span>
                 </div>
-              ))}
+              </div>
+              <button onClick={() => onDeleteEvent(event.id)} className="p-4 bg-red-500/10 text-red-500 rounded-2xl opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white transition-all"><Trash2 size={20} /></button>
             </div>
-          ) : (
-            <div className="bg-[#0A0A0B]/80 border border-white/5 rounded-[2.5rem] p-16 text-center flex flex-col items-center justify-center space-y-4">
-              <p className="text-zinc-500 text-sm font-bold uppercase tracking-widest">No events found</p>
-              <button 
-                onClick={() => setActiveTab('create')}
-                className="px-6 py-2 bg-white/5 text-white text-[10px] font-black uppercase rounded-lg border border-white/10 hover:bg-[#E879F9]"
-              >
-                Create One
-              </button>
-            </div>
+          )) : (
+            <div className="col-span-full py-20 text-center text-zinc-600 font-black uppercase tracking-widest bg-white/[0.01] rounded-[3rem] border border-dashed border-white/5">No dimensions launched</div>
           )}
         </div>
       )}

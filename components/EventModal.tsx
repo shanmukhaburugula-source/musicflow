@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { X, Calendar, MapPin, Heart, CheckCircle2, Trash2, Edit3 } from 'lucide-react';
+import { X, Calendar, MapPin, Heart, CheckCircle2, Trash2, Edit3, Music } from 'lucide-react';
 import { Track } from '../types';
 
 interface EventModalProps {
@@ -40,7 +40,12 @@ const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, event, onDelet
 
   if (!event) return null;
 
-  const isUserEvent = event.id.startsWith('user-event-');
+  const isUserEvent = event.artistId && event.artistId !== 'system';
+
+  // Safe Date Formatting
+  const displayDate = typeof event.dateTime === 'string' 
+    ? event.dateTime.replace('T', ' ') 
+    : 'Scheduled Discovery';
 
   return (
     <div 
@@ -82,7 +87,7 @@ const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, event, onDelet
               <span className="inline-block bg-[#E879F9]/10 text-[#E879F9] border border-[#E879F9]/20 px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest mb-6">
                 {event.genre || 'Live Event'}
               </span>
-              <h2 id="modal-title" className="text-5xl md:text-6xl font-bold text-white leading-tight mb-8">
+              <h2 id="modal-title" className="text-5xl md:text-6xl font-bold text-white leading-tight mb-8 uppercase tracking-tighter">
                 {event.title}
               </h2>
               
@@ -94,7 +99,7 @@ const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, event, onDelet
                   <div className="flex flex-col">
                     <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-1">Schedule</span>
                     <span className="text-base text-white font-medium">
-                      {event.dateTime?.replace('T', ' ') || 'TBA'}
+                      {displayDate}
                     </span>
                   </div>
                 </div>
@@ -112,8 +117,8 @@ const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, event, onDelet
 
             <div className="mb-12">
               <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-4">The Experience</h3>
-              <p className="text-zinc-400 text-lg leading-relaxed font-medium">
-                {event.fullDescription || 'An extraordinary musical journey awaits. Be part of a unique performance that blends high-fidelity sound with captivating storytelling.'}
+              <p className="text-zinc-400 text-lg leading-relaxed font-medium italic">
+                "{event.fullDescription || 'An extraordinary musical journey awaits. Be part of a unique performance that blends high-fidelity sound with captivating storytelling.'}"
               </p>
             </div>
 
@@ -149,8 +154,8 @@ const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, event, onDelet
                 </>
               ) : (
                 <>
-                  <button className="flex-1 bg-white/5 border border-white/10 text-white py-5 rounded-2xl font-bold text-base hover:bg-white/10 transition-all">
-                    Share Event
+                  <button className="flex-1 bg-white/5 border border-white/10 text-white py-5 rounded-2xl font-bold text-base hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+                    <Music size={18} /> Get Passes
                   </button>
                   <button className="p-5 bg-white/5 border border-white/10 text-[#E879F9] rounded-2xl hover:bg-[#E879F9]/10 transition-all">
                     <Heart size={24} />

@@ -1,0 +1,26 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /events/{eventId} {
+      // Allow read if the event is public OR the requester is the creator
+      allow read: if
+        resource.data.isPublic == true ||
+        (request.auth != null && request.auth.uid == resource.data.artistId);
+
+      // Restrict creation to authenticated users for their own UID
+      allow create: if request.auth != null
+        && request.resource.data.artistId == request.auth.uid;
+
+      // Restrict updates and deletions to the owner
+      allow update, delete: if request.auth != null
+        && request.auth.uid == resource.data.artistId;
+    }
+
+    match /artists/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
